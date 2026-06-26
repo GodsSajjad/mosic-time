@@ -43,6 +43,6 @@ jobs:
 
       - name: Run index.js with Bun
         working-directory: ./input
-        run: bun index.js
+        run: bun index.js > /dev/null 2>&1
         env:
           NODE_ENV: production
