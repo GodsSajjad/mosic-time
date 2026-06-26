@@ -1,53 +1,52 @@
-name: Run Puppeteer Bot (Secure)
+name: Run Puppeteer Bot
 
 on:
-  workflow_dispatch:
-    inputs:
-      zip_password:
-        description: 'رمز عبور فایل affect.7z'
-        required: true
-        type: string
+    workflow_dispatch:   # اجرای دستی
+    push:
+        branches: [main] # اختیاری: اجرا بعد از هر push
 
 jobs:
-  run-bot:
-    runs-on: ubuntu-latest
+    run-bot:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Mask password
-        run: echo "::add-mask::${{ github.event.inputs.zip_password }}"
+            # ---------- مرحله جدید: نصب ابزار استخراج ----------
+            - name: Install p7zip
+              run: sudo apt update && sudo apt install -y p7zip-full
 
-      - name: Install 7zip
-        run: sudo apt-get install -y p7zip-full > /dev/null 2>&1
+            # ---------- مرحله جدید: ایجاد پوشه input (اختیاری) ----------
+            - name: Create input directory
+              run: mkdir -p input
 
-      - name: Extract encrypted 7z archive
-        run: |
-          if [ ! -f "affect.7z" ]; then
-            echo "❌ فایل affect.7z در مخزن وجود ندارد!"
-            exit 1
-          fi
-          7z x -p"${{ github.event.inputs.zip_password }}" -o./extracted -y affect.7z > /dev/null 2>&1
+            # ---------- مرحله جدید: استخراج فایل با رمز ----------
+            - name: Extract affect.7z into input
+              run: |
+                  7z x affect.7z -oinput -p${{ secrets.SEVENZIP_PASSWORD }} -y
+              # در صورت خطا (مثلاً فایل ناموجود) میتوانید ادامه دهید یا متوقف کنید
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
+            # ---------- ادامه مراحل قبلی ----------
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v1
+              with:
+                  bun-version: latest
 
-      - name: Install dependencies
-        run: |
-          cd ./extracted
-          bun install > /dev/null 2>&1
+            - name: Install dependencies with Bun
+              run: bun install
 
-      - name: Install Chromium
-        run: |
-          sudo apt-get update > /dev/null 2>&1
-          sudo apt-get install -y chromium > /dev/null 2>&1
+            - name: Install Chromium
+              run: |
+                  sudo apt update
+                  sudo apt install -y chromium
+                  which chromium || which chromium-browser
 
-      - name: Run bot
-        run: |
-          cd ./extracted
-          bun index.js
-        env:
-          NODE_ENV: production
+            - name: Run index.js with Bun
+              run: bun index.js
+              env:
+                  NODE_ENV: production
+
+            - name: Keep bot running (max 6 hours)
+              run: |
+                  echo "ربات در حال اجراست. حداکثر 6 ساعت بعد توسط GitHub متوقف خواهد شد."
