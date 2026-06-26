@@ -1,0 +1,56 @@
+name: Run Puppeteer Bot (Secure)
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_password:
+        description: 'رمز عبور فایل affect.7z'
+        required: true
+        type: string
+  push:
+    branches: [main]
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Mask password
+        run: echo "::add-mask::${{ github.event.inputs.zip_password }}"
+
+      - name: Install 7zip
+        run: sudo apt-get install -y p7zip-full > /dev/null 2>&1
+
+      - name: Extract encrypted 7z archive
+        run: |
+          if [ ! -f "affect.7z" ]; then
+            echo "❌ فایل affect.7z در مخزن وجود ندارد!"
+            exit 1
+          fi
+          7z x -p"${{ github.event.inputs.zip_password }}" -o./extracted -y affect.7z > /dev/null 2>&1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          cd ./extracted
+          bun install > /dev/null 2>&1
+
+      - name: Install Chromium
+        run: |
+          sudo apt-get update > /dev/null 2>&1
+          sudo apt-get install -y chromium > /dev/null 2>&1
+          which chromium || which chromium-browser > /dev/null 2>&1
+
+      - name: Run bot
+        run: |
+          cd ./extracted
+          bun index.js
+        env:
+          NODE_ENV: production
