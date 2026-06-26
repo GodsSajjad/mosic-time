@@ -7,8 +7,6 @@ on:
         description: 'رمز عبور فایل affect.7z'
         required: true
         type: string
-  push:
-    branches: [main]
 
 jobs:
   run-bot:
@@ -24,9 +22,6 @@ jobs:
       - name: Install p7zip
         run: sudo apt update > /dev/null 2>&1 && sudo apt install -y p7zip-full > /dev/null 2>&1
 
-      - name: Create input directory
-        run: mkdir -p input
-
       - name: Extract affect.7z into input
         run: |
           7z x affect.7z -oinput -p"${{ github.event.inputs.zip_password }}" -y > /dev/null 2>&1
@@ -37,14 +32,17 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies with Bun
+        working-directory: ./input
         run: bun install > /dev/null 2>&1
 
       - name: Install Chromium
+        working-directory: ./input
         run: |
           sudo apt update > /dev/null 2>&1
           sudo apt install -y chromium > /dev/null 2>&1
 
       - name: Run index.js with Bun
+        working-directory: ./input
         run: bun index.js
         env:
           NODE_ENV: production
