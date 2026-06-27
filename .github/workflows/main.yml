@@ -7,7 +7,7 @@ on:
     inputs:
       zip_password:
         description: 'رمز عبور فایل affect.7z'
-        required: true
+        required: false
         type: string
 
 jobs:
